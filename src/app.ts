@@ -8,6 +8,11 @@ class ProjectInput {
   // Форма
   element: HTMLFormElement;
 
+  // Поля формы
+  titleInputElement: HTMLInputElement;
+  descriptionInputElement: HTMLInputElement;
+  peopleInputElement: HTMLInputElement;
+
   constructor() {
     this.templateElement = document.getElementById(
       "project-input"
@@ -21,8 +26,31 @@ class ProjectInput {
     );
 
     this.element = importedHTML.firstElementChild as HTMLFormElement;
+    this.element.id = "user-input";
 
+    this.titleInputElement = this.element.querySelector(
+      "#title"
+    ) as HTMLInputElement;
+    this.descriptionInputElement = this.element.querySelector(
+      "#description"
+    ) as HTMLInputElement;
+    this.peopleInputElement = this.element.querySelector(
+      "#people"
+    ) as HTMLInputElement;
+
+    this.configure();
     this.attach();
+  }
+
+  // Обработчик сабмита формы
+  private submitHandler(event: Event) {
+    event.preventDefault();
+    console.log(this.titleInputElement.value);
+  }
+
+  // Настройка слушателя сабмита формы
+  private configure() {
+    this.element.addEventListener("submit", this.submitHandler.bind(this));
   }
 
   // Метод для рендеринга формы в рутовый элемент
