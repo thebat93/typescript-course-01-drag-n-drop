@@ -58,11 +58,44 @@ class ProjectInput {
     this.attach();
   }
 
+  // Метод для получения и валидации данных формы
+  private getUserInput(): [string, string, number] | void {
+    const enteredTitle = this.titleInputElement.value;
+    const enteredDescription = this.descriptionInputElement.value;
+    const enteredPeople = this.peopleInputElement.value;
+
+    if (
+      enteredTitle.trim().length === 0 ||
+      enteredDescription.trim().length === 0 ||
+      enteredPeople.trim().length === 0
+    ) {
+      alert("Invalid input, please try again!");
+      return;
+    } else {
+      return [enteredTitle, enteredDescription, +enteredPeople];
+    }
+  }
+
+  private clearInputs() {
+    this.titleInputElement.value = "";
+    this.descriptionInputElement.value = "";
+    this.peopleInputElement.value = "";
+  }
+
   // Обработчик сабмита формы
   @autobind
   private submitHandler(event: Event) {
     event.preventDefault();
-    console.log(this.titleInputElement.value);
+
+    const userInput = this.getUserInput();
+
+    if (Array.isArray(userInput)) {
+      const [title, description, people] = userInput;
+
+      console.log({ title, description, people });
+
+      this.clearInputs();
+    }
   }
 
   // Настройка слушателя сабмита формы
