@@ -1,3 +1,19 @@
+// Декоратор autobind
+// Возвращает метод, забинденный к контексту инстанса класса
+function autobind(_: any, _1: string, descriptor: PropertyDescriptor) {
+  const originalMethod = descriptor.value;
+  const adjustedDescriptor: PropertyDescriptor = {
+    configurable: true,
+    get() {
+      const boundFn = originalMethod.bind(this);
+      return boundFn;
+    },
+  };
+
+  return adjustedDescriptor;
+}
+
+// Класс ProjectInput
 class ProjectInput {
   // Шаблон формы
   templateElement: HTMLTemplateElement;
@@ -43,6 +59,7 @@ class ProjectInput {
   }
 
   // Обработчик сабмита формы
+  @autobind
   private submitHandler(event: Event) {
     event.preventDefault();
     console.log(this.titleInputElement.value);
@@ -50,7 +67,7 @@ class ProjectInput {
 
   // Настройка слушателя сабмита формы
   private configure() {
-    this.element.addEventListener("submit", this.submitHandler.bind(this));
+    this.element.addEventListener("submit", this.submitHandler);
   }
 
   // Метод для рендеринга формы в рутовый элемент
