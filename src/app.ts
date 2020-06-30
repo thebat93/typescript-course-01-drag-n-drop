@@ -65,6 +65,47 @@ function autobind(_: any, _1: string, descriptor: PropertyDescriptor) {
   return adjustedDescriptor;
 }
 
+// Класс ProjectList
+class ProjectList {
+  // Шаблон формы
+  templateElement: HTMLTemplateElement;
+
+  // Рутовый элемент приложения
+  hostElement: HTMLDivElement;
+
+  // Секция со списком
+  element: HTMLElement;
+
+  constructor(private type: "active" | "finished") {
+    this.templateElement = document.getElementById(
+      "project-list"
+    )! as HTMLTemplateElement;
+
+    this.hostElement = document.getElementById("app")! as HTMLDivElement;
+
+    const importedHTML = document.importNode(
+      this.templateElement.content,
+      true
+    );
+
+    this.element = importedHTML.firstElementChild as HTMLElement;
+    this.element.id = `${this.type}-projects`;
+    this.attach();
+    this.renderContent();
+  }
+
+  private renderContent() {
+    const listId = `${this.type}-projects-list`;
+    this.element.querySelector("ul")!.id = listId;
+    this.element.querySelector("h2")!.textContent =
+      this.type.toUpperCase() + " PROJECTS";
+  }
+
+  private attach() {
+    this.hostElement.insertAdjacentElement("beforeend", this.element);
+  }
+}
+
 // Класс ProjectInput
 class ProjectInput {
   // Шаблон формы
@@ -180,3 +221,5 @@ class ProjectInput {
 }
 
 const projInput = new ProjectInput();
+const activeProjectList = new ProjectList("active");
+const finishedProjectList = new ProjectList("finished");
