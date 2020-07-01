@@ -1,10 +1,28 @@
+// Тип Project
+enum ProjectStatus {
+  Active,
+  Finished,
+}
+
+class Project {
+  constructor(
+    public id: string,
+    public title: string,
+    public description: string,
+    public people: number,
+    public status: ProjectStatus
+  ) {}
+}
+
 // Стейт
+type Listener = (items: Project[]) => void;
+
 class ProjectState {
   // Список подписчиков
-  private listeners: any[] = [];
+  private listeners: Listener[] = [];
 
   // Стейт: список сохраненных проектов
-  private projects: any[] = [];
+  private projects: Project[] = [];
 
   // Поле, хранящее инстанс класса (паттерн синглтон)
   private static instance: ProjectState;
@@ -22,18 +40,19 @@ class ProjectState {
   }
 
   // Метод для добавления подписчика
-  addListener(listenerFn: Function) {
+  addListener(listenerFn: Listener) {
     this.listeners.push(listenerFn);
   }
 
   // Метод для добавления проекта в стейт
   addProject(title: string, description: string, numOfPeople: number) {
-    const newProject = {
-      id: Math.random().toString(),
+    const newProject = new Project(
+      Math.random().toString(),
       title,
       description,
-      people: numOfPeople,
-    };
+      numOfPeople,
+      ProjectStatus.Active
+    );
 
     this.projects.push(newProject);
 
@@ -126,7 +145,7 @@ class ProjectList {
   element: HTMLElement;
 
   // Список проектов, которые требуется отрендерить
-  assignedProjects: any[];
+  assignedProjects: Project[];
 
   constructor(private type: "active" | "finished") {
     this.templateElement = document.getElementById(
@@ -146,7 +165,7 @@ class ProjectList {
     this.element.id = `${this.type}-projects`;
 
     // Добавление подписчика: рендер нового стейта при его изменении
-    projectState.addListener((projects: any[]) => {
+    projectState.addListener((projects: Project[]) => {
       this.assignedProjects = projects;
       this.renderProjects();
     });
