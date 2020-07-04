@@ -14,13 +14,21 @@ class Project {
   ) {}
 }
 
-// Стейт
-type Listener = (items: Project[]) => void;
+type Listener<T> = (items: T[]) => void;
 
-class ProjectState {
+// Базовый класс State
+class State<T> {
   // Список подписчиков
-  private listeners: Listener[] = [];
+  protected listeners: Listener<T>[] = [];
 
+  // Метод для добавления подписчика
+  addListener(listenerFn: Listener<T>) {
+    this.listeners.push(listenerFn);
+  }
+}
+
+// Стейт
+class ProjectState extends State<Project> {
   // Стейт: список сохраненных проектов
   private projects: Project[] = [];
 
@@ -28,7 +36,9 @@ class ProjectState {
   private static instance: ProjectState;
 
   // Создание инстанса разрешено только с помощью getInstance()
-  private constructor() {}
+  private constructor() {
+    super();
+  }
 
   static getInstance() {
     if (this.instance) {
@@ -37,11 +47,6 @@ class ProjectState {
 
     this.instance = new ProjectState();
     return this.instance;
-  }
-
-  // Метод для добавления подписчика
-  addListener(listenerFn: Listener) {
-    this.listeners.push(listenerFn);
   }
 
   // Метод для добавления проекта в стейт
@@ -133,37 +138,69 @@ function autobind(_: any, _1: string, descriptor: PropertyDescriptor) {
   return adjustedDescriptor;
 }
 
-// Класс ProjectList
-class ProjectList {
+// Базовый класс Component
+abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   // Шаблон формы
   templateElement: HTMLTemplateElement;
 
   // Рутовый элемент приложения
-  hostElement: HTMLDivElement;
+  hostElement: T;
 
-  // Секция со списком
-  element: HTMLElement;
+  // Элемент для рендеринга
+  element: U;
 
-  // Список проектов, которые требуется отрендерить
-  assignedProjects: Project[];
-
-  constructor(private type: "active" | "finished") {
+  constructor(
+    templateId: string,
+    hostElementId: string,
+    insertAtStart: boolean,
+    newElementId?: string
+  ) {
     this.templateElement = document.getElementById(
-      "project-list"
+      templateId
     )! as HTMLTemplateElement;
 
-    this.hostElement = document.getElementById("app")! as HTMLDivElement;
-
-    this.assignedProjects = [];
+    this.hostElement = document.getElementById(hostElementId)! as T;
 
     const importedHTML = document.importNode(
       this.templateElement.content,
       true
     );
 
-    this.element = importedHTML.firstElementChild as HTMLElement;
-    this.element.id = `${this.type}-projects`;
+    this.element = importedHTML.firstElementChild as U;
 
+    if (newElementId) {
+      this.element.id = newElementId;
+    }
+
+    this.attach(insertAtStart);
+  }
+
+  private attach(insertAtStart: boolean) {
+    this.hostElement.insertAdjacentElement(
+      insertAtStart === true ? "afterbegin" : "beforeend",
+      this.element
+    );
+  }
+
+  abstract configure(): void;
+  abstract renderContent(): void;
+}
+
+// Класс ProjectList
+class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+  // Список проектов, которые требуется отрендерить
+  assignedProjects: Project[];
+
+  constructor(private type: "active" | "finished") {
+    super("project-list", "app", false, `${type}-projects`);
+
+    this.assignedProjects = [];
+
+    this.configure();
+    this.renderContent();
+  }
+
+  configure() {
     // Добавление подписчика: рендер нового стейта при его изменении
     projectState.addListener((projects: Project[]) => {
       // Фильтрация по типу
@@ -176,9 +213,13 @@ class ProjectList {
       this.assignedProjects = relevantProjects;
       this.renderProjects();
     });
+  }
 
-    this.attach();
-    this.renderContent();
+  renderContent() {
+    const listId = `${this.type}-projects-list`;
+    this.element.querySelector("ul")!.id = listId;
+    this.element.querySelector("h2")!.textContent =
+      this.type.toUpperCase() + " PROJECTS";
   }
 
   private renderProjects() {
@@ -194,49 +235,17 @@ class ProjectList {
       listEl.appendChild(listItem);
     }
   }
-
-  private renderContent() {
-    const listId = `${this.type}-projects-list`;
-    this.element.querySelector("ul")!.id = listId;
-    this.element.querySelector("h2")!.textContent =
-      this.type.toUpperCase() + " PROJECTS";
-  }
-
-  private attach() {
-    this.hostElement.insertAdjacentElement("beforeend", this.element);
-  }
 }
 
 // Класс ProjectInput
-class ProjectInput {
-  // Шаблон формы
-  templateElement: HTMLTemplateElement;
-
-  // Рутовый элемент приложения
-  hostElement: HTMLDivElement;
-
-  // Форма
-  element: HTMLFormElement;
-
+class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
   // Поля формы
   titleInputElement: HTMLInputElement;
   descriptionInputElement: HTMLInputElement;
   peopleInputElement: HTMLInputElement;
 
   constructor() {
-    this.templateElement = document.getElementById(
-      "project-input"
-    )! as HTMLTemplateElement;
-
-    this.hostElement = document.getElementById("app")! as HTMLDivElement;
-
-    const importedHTML = document.importNode(
-      this.templateElement.content,
-      true
-    );
-
-    this.element = importedHTML.firstElementChild as HTMLFormElement;
-    this.element.id = "user-input";
+    super("project-input", "app", true, "user-input");
 
     this.titleInputElement = this.element.querySelector(
       "#title"
@@ -249,8 +258,14 @@ class ProjectInput {
     ) as HTMLInputElement;
 
     this.configure();
-    this.attach();
   }
+
+  // Настройка слушателя сабмита формы
+  configure() {
+    this.element.addEventListener("submit", this.submitHandler);
+  }
+
+  renderContent() {}
 
   // Метод для получения и валидации данных формы
   private getUserInput(): [string, string, number] | void {
@@ -308,16 +323,6 @@ class ProjectInput {
 
       this.clearInputs();
     }
-  }
-
-  // Настройка слушателя сабмита формы
-  private configure() {
-    this.element.addEventListener("submit", this.submitHandler);
-  }
-
-  // Метод для рендеринга формы в рутовый элемент
-  private attach() {
-    this.hostElement.insertAdjacentElement("afterbegin", this.element);
   }
 }
 
